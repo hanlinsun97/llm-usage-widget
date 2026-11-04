@@ -1,0 +1,6 @@
+[
+  {"id": "codex",    "name": "Codex",  "label": "A", "icon": "codex", "chatgptProfile": "a", "codexHome": ".codex"},
+  {"id": "codex_iu", "name": "Codex",  "label": "B", "icon": "codex", "chatgptProfile": "b", "codexHome": ".codex_b"},
+  {"id": "codex_su", "name": "Codex",  "label": "C", "icon": "codex", "chatgptProfile": "c", "codexHome": ".codex_c"},
+  {"id": "claude",   "name": "Claude", "menuLabel": "C", "icon": "claude"}
+]

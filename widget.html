@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:">
+<title>LLM Usage</title>
+<style>
+/* Restored 1.1 look (glass, two rings, title and footer). One rule per selector;
+   the .compact block only overrides sizes. */
+/* High-contrast green: opaque rings and text; the 5-hour badge is a solid chip. */
+:root{color-scheme:dark;--ink:#f1f6f1;--sub:rgba(241,246,241,.72);--muted:#a1ad98;--track:rgba(255,255,255,.10);--line:#78806a44;--ring:#cde8d4;--inner:#c1cba8;--five:#8fc39d;--badge:#eaf5ed;--badge-ink:#16271c;--warn:#ecc798;--low:#f0a56c;--panel:#283326fa;--panel-line:#ffffff2b;--glass-rgb:32,42,36;--glass:rgba(var(--glass-rgb),var(--glass-tint,.1))}
+body.light{color-scheme:light;--ink:#1c2a21;--sub:rgba(28,42,33,.72);--muted:#6f7a6c;--track:rgba(0,0,0,.08);--line:#dce3d8;--ring:#3b7350;--inner:#596b54;--five:#86b893;--badge:#2f5f40;--badge-ink:#ffffff;--warn:#ad5841;--low:#c96a32;--panel:#f1f4e8fc;--panel-line:#dce3d8;--glass-rgb:251,252,245;
+  /* Must be redefined here: a custom property that uses var() resolves where it is declared. */
+  --glass:rgba(var(--glass-rgb),var(--glass-tint,.1))}
+*{box-sizing:border-box}
+html,body{margin:0;overflow:hidden;background:transparent;font:13px -apple-system,BlinkMacSystemFont,sans-serif;color:var(--ink);user-select:none;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+button:focus,.account:focus{outline:none}
+/* WebKit focuses the popover's first button on open; show rings only after keyboard use. */
+button:focus-visible,.account:focus-visible{outline:none}
+body.keyboard button:focus-visible,body.keyboard .account:focus-visible{outline:2px solid var(--inner);outline-offset:4px}
+.widget{margin:8px;padding:13px 14px 12px;height:calc(100vh - 16px);border:1px solid var(--line);border-radius:25px;background:var(--glass);box-shadow:inset 0 1px 0 #ffffff12,0 4px 14px #0002}
+.head{display:flex;align-items:center;justify-content:flex-end;height:18px}
+.actions{display:flex;align-items:center;gap:9px}
+.settings{border:0;background:transparent;padding:0;color:var(--muted);font-size:17px;cursor:pointer}
+.refresh{border:0;background:transparent;color:var(--muted);font-size:23px;cursor:pointer;line-height:20px;padding:0 2px}
+.settings:hover,.refresh:hover{color:var(--ink)}
+.refresh.spinning{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#accounts{display:grid;grid-template-columns:repeat(var(--columns,2),minmax(0,1fr));gap:10px;margin-top:8px}
+.account{text-align:center;min-width:0;cursor:pointer;border-radius:16px}
+.identity{display:flex;align-items:center;justify-content:center;gap:5px;height:22px}
+.identity b{font-size:16px;font-weight:600;letter-spacing:.1px}
+.mark{font-size:22px;font-weight:500;display:flex;align-items:center}
+.codex-icon{width:22px;height:22px;display:block}
+.account-tag{font-size:11px;color:var(--muted);padding:2px 5px;border:1px solid var(--line);border-radius:5px}
+.account-tag.active{background:var(--badge);border-color:var(--badge);color:var(--badge-ink)}
+.warning{font-size:11px;color:var(--warn)}
+.gauge{position:relative;width:142px;height:142px;margin:5px auto 3px}
+.rings{width:100%;height:100%;transform:rotate(-90deg)}
+.track,.pace,.arc{fill:none}
+.track{stroke:var(--track)}
+.pace{stroke:var(--track);stroke-opacity:1}
+.arc{stroke-linecap:round}
+.weekly{stroke:var(--ring)}
+.low .weekly{stroke:var(--low)}
+.five-hour{stroke:var(--five)}
+.stale .arc{opacity:.45}
+.reading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.number{font-size:30px;font-weight:600;letter-spacing:-.8px;line-height:1;font-variant-numeric:tabular-nums}
+.unit{font-size:10px;font-weight:500;color:var(--sub);margin-top:2px;letter-spacing:.4px}
+.number.empty{font-size:13px;font-weight:500;letter-spacing:0;color:var(--muted)}
+.tok{color:var(--sub);font-variant-numeric:tabular-nums}
+.stale .reading{opacity:.55}
+.five-badge{position:absolute;transform:translate(-50%,-50%);border-radius:10px;padding:1px 5px;background:var(--badge);color:var(--badge-ink);font-size:11px;font-weight:650;line-height:14px;box-shadow:0 0 0 2px rgba(var(--glass-rgb),.6);font-variant-numeric:tabular-nums;white-space:nowrap}
+.five-badge.low{background:var(--low);color:#fff}
+.reset{font-size:12px;color:var(--ink);line-height:18px;height:18px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.reset .age{color:var(--warn)}
+.foot{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:9px;color:var(--muted);gap:12px}
+#status{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#status.error{color:var(--warn)}
+#last-update{white-space:nowrap}
+.detail{position:absolute;inset:49px 24px 26px;padding:18px 22px;border-radius:20px;background:var(--panel);border:1px solid var(--panel-line);font-size:12px;line-height:1.55;display:none;overflow:auto;box-shadow:0 8px 28px #0004}
+.detail.open{display:block}
+.d-head{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;margin-bottom:12px}
+.d-head svg{width:18px;height:18px}
+.d-head .close{margin-left:auto;border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:0}
+.d-head .close:hover{color:var(--ink)}
+.pill{border:1px solid var(--line);border-radius:9px;color:var(--muted);background:transparent;font-size:10px;font-weight:500;padding:3px 9px;margin-left:4px;cursor:pointer;white-space:nowrap}
+.pill:hover:not(:disabled){color:var(--ink);border-color:var(--muted)}
+.pill.on{background:var(--badge);border-color:var(--badge);color:var(--badge-ink);cursor:default}
+.pill:disabled{opacity:.5}
+dl{display:grid;grid-template-columns:62px 1fr;column-gap:10px;row-gap:6px;margin:0}
+dt{color:var(--muted)}
+dd{margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+dd .sub{display:block;color:var(--muted);font-size:11px;margin-top:1px}
+.note{color:var(--muted);font-size:11px;margin:12px 0 0;padding-top:10px;border-top:1px solid var(--line)}
+/* Popover */
+.compact .widget{margin:0;height:100vh;border:0;border-radius:0;padding:14px;box-shadow:none}
+.compact #accounts{gap:8px}
+.compact .identity{gap:3px}
+.compact .identity b{font-size:11px}
+.compact .mark{font-size:16px}
+.compact .codex-icon{width:16px;height:16px}
+.compact .account-tag{font-size:8px;padding:1px 3px}
+.compact .gauge{width:88px;height:88px;margin:5px auto 2px}
+.compact .number{font-size:18px;letter-spacing:-.5px}
+.compact .unit{font-size:8px;margin-top:1px}
+.compact .number.empty{font-size:9px}
+.compact .reset .tok{display:block;font-size:9px;line-height:11px}
+.compact .reset .tok .dot{display:none}
+.compact .five-badge{font-size:9px;padding:0 3px;line-height:12px;box-shadow:0 0 0 1px rgba(var(--glass-rgb),.6)}
+.compact .reset{font-size:10px;line-height:14px;height:25px}
+.compact .detail{inset:36px 10px 8px;padding:10px 16px;font-size:11px;line-height:1.35}
+.compact .d-head{font-size:12px;margin-bottom:6px}
+.compact .d-head svg{width:15px;height:15px}
+.compact dl{row-gap:3px}
+.compact .note{margin-top:8px;padding-top:6px}
+</style>
+<div class="widget"><div class="head"><div class="actions"><button class="settings" title="Settings" aria-label="Settings" onclick="post('settings')">⚙</button><button id="refresh" class="refresh" title="Refresh usage" aria-label="Refresh usage" onclick="refresh()">↻</button></div></div><div id="accounts"></div><div class="foot"><span id="status">Connecting…</span><span id="last-update">Awaiting update</span></div></div><div id="detail" class="detail" role="dialog" aria-modal="true"></div>
+<script>
+// Weekly (inner) ring radius in the 160-unit gauge; the 5-hour ring is r=76.
+const IR=48,STALE_MS=15*60000,UPDATE_GRACE_MS=15*60000;
+// Built-in icons are neutral glyphs; an account's own SVG (iconFile in accounts.json) replaces them.
+const TERMINAL='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="3.5"/><path d="M6.5 8l2.5 2-2.5 2M10.5 12.5h3"/></svg>';
+let snapshot={rows:[],collectedAt:null},app=null,switching=null,switchError=null,detailId=null,refreshing=false,source={ok:true};
+const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const post=m=>window.webkit?.messageHandlers?.widget?.postMessage(m);
+const ms=t=>t?Date.parse(t):NaN;
+const num=v=>Number.isFinite(Number(v))?Number(v):0;
+// Accounts come from accounts.json via setAccounts(): order, display name, tag, icon and
+// whether the ChatGPT app can switch to it. Without a list the snapshot's rows are shown as-is.
+let accounts=[];
+const acct=id=>accounts.find(a=>a.id===id)||{id,name:String(id)};
+const fullName=id=>{const a=acct(id);return a.label?`${a.name} ${a.label}`:a.name};
+const label=id=>escape(acct(id).label||'');
+const canSwitch=id=>!!acct(id).chatgptProfile;
+function mark(id,cls=''){const a=acct(id),svg=typeof a.iconSVG==='string'&&a.iconSVG.startsWith('<svg')?a.iconSVG:['codex','terminal'].includes(a.icon)?TERMINAL:null;
+ return svg?svg.replace('<svg ',`<svg class="${cls}" aria-hidden="true" `):['claude','asterisk'].includes(a.icon)?'<span aria-hidden="true">✳</span>':''}
+function setAccounts(list){accounts=Array.isArray(list)?list.filter(a=>a&&typeof a.id==='string'&&a.id&&typeof a.name==='string'):[];render()}
+// Configured accounts in their order; a configured account missing from the snapshot shows as "No data".
+function rowsShown(){if(!accounts.length)return snapshot.rows;return accounts.map(a=>snapshot.rows.find(r=>r.id===a.id)||{id:a.id,state:'unavailable',weekly:null,fiveHour:null,fiveHourAbsent:false})}
+function duration(seconds){const minutes=Math.max(0,Math.ceil(seconds/60)),days=Math.floor(minutes/1440),hours=Math.floor(minutes%1440/60),mins=minutes%60;return days?`${days}d ${hours}h`:hours?`${hours}h ${mins}m`:`${mins}m`}
+function shortAge(seconds){const m=Math.max(1,Math.floor(seconds/60));return m<60?`${m}m`:m<2880?`${Math.floor(m/60)}h`:`${Math.floor(m/1440)}d`}
+function clock(t){const d=new Date(t);if(Number.isNaN(d.getTime()))return '—';const hm=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;return d.toDateString()===new Date().toDateString()?hm:`${d.toLocaleDateString('en-GB',{weekday:'short'})} ${hm}`}
+function compactNumber(n,unit){return n<10?`${Number(n.toFixed(1))}${unit}`:`${Math.round(n)}${unit}`}
+function tokenCount(n){return n>=1e9?compactNumber(n/1e9,'B'):n>=1e6?compactNumber(n/1e6,'M'):n>=1e3?compactNumber(n/1e3,'K'):String(n)}
+const pct=v=>Number(Math.max(0,Math.min(100,v)).toFixed(1));
+function expired(w){return Number.isFinite(ms(w?.resetsAt))&&ms(w.resetsAt)<=Date.now()}
+// A window that has not started (e.g. Claude after a reset with no new usage) has no reset time yet; it is valid.
+function validWindow(w){return !!w&&Number.isFinite(w.remaining)&&(w.resetsAt==null||Number.isFinite(ms(w.resetsAt)))&&!expired(w)}
+const hasReset=w=>Number.isFinite(ms(w?.resetsAt));
+function resetIn(w){return hasReset(w)?duration((ms(w.resetsAt)-Date.now())/1000):'not started'}
+// An unknown measurement time counts as stale, as in the menu bar.
+function isStale(r){const t=ms(r.measuredAt);return r.state==='stale'||!Number.isFinite(t)||Date.now()-t>STALE_MS}
+// Center label when there is no current weekly reading. Account state wins over window timing.
+function emptyLabel(r){if(r.state==='signIn')return 'Sign in';if(expired(r.weekly))return Date.now()-ms(r.weekly.resetsAt)<UPDATE_GRACE_MS&&!isStale(r)?'Updating':'No data';return 'No data'}
+// Token totals must belong to the current server reset window; zero is a valid count.
+function currentTokens(r,key){const t=r.tokenUsage?.[key],w=r[key];if(!validWindow(w)||!t||!Number.isFinite(t.usage?.total_tokens)||t.usage.total_tokens<0||ms(t.until)!==ms(w.resetsAt)||!t.sources?.some(s=>s.state==='ok'||s.state==='stale'))return null;return t}
+function tokenLine(r){const t=currentTokens(r,'weekly');if(!t)return '';return `<span class="tok" title="Recorded tokens since the weekly reset${t.complete?'':' (some devices offline: lower bound)'}"><span class="dot"> · </span>${t.complete?'':'≥'}${tokenCount(t.usage.total_tokens)} tok</span>`}
+// Pace track: on the weekly ring the track is darker from the top over the share of the week
+// still left. The weekly arc covers it when usage is on or under pace; an uncovered remainder means over pace.
+function paceFraction(w){if(!validWindow(w)||!hasReset(w)||!Number.isFinite(w.minutes)||w.minutes<=0)return null;return Math.max(0,Math.min(1,(ms(w.resetsAt)-Date.now())/(w.minutes*60000)))}
+function ring(w,r,width,kind){const c=2*Math.PI*r,track=`<circle class="track" cx="80" cy="80" r="${r}" stroke-width="${width}"/>`;if(!validWindow(w))return track;const value=Math.max(0,Math.min(100,w.remaining)),pace=kind==='weekly'?paceFraction(w):null;
+ return track+(pace>0?`<circle class="pace" cx="80" cy="80" r="${r}" stroke-width="${width}" stroke-dasharray="${c*pace} ${c}"/>`:'')+(value>0?`<circle class="arc ${kind}" cx="80" cy="80" r="${r}" stroke-width="${width}" stroke-dasharray="${c*value/100} ${c}"/>`:'')}
+const hasFive=r=>!(r.fiveHourAbsent&&!r.fiveHour);
+// 5-hour remaining sits in a badge at the end of the outer arc.
+function badgeAt(value){const a=(-90+3.6*value)*Math.PI/180;return {left:50+47.5*Math.cos(a),top:50+47.5*Math.sin(a)}}
+function fiveBadge(r){if(!hasFive(r))return '';const w=r.fiveHour,valid=validWindow(w)&&r.state!=='signIn',value=valid?Math.max(0,Math.min(100,w.remaining)):0,p=badgeAt(value),t=currentTokens(r,'fiveHour');
+ const title=`5-hour: ${valid?pct(value)+'% left · resets in '+resetIn(w):'no current reading'}${t?' · '+tokenCount(t.usage.total_tokens)+' tokens':''}`;
+ return `<span class="five-badge ${valid&&value<20?'low':''}" style="left:${p.left}%;top:${p.top}%" title="${escape(title)}">${valid?Math.round(value):'—'}</span>`}
+function ident(r,stale,age){const active=app?.running&&app.id===r.id,a=acct(r.id);
+ return `<span class="mark" aria-hidden="true">${mark(r.id,'codex-icon')}</span><b>${escape(a.name)}</b>${a.label?`<span class="account-tag ${active?'active':''}" title="${active?'Active in the ChatGPT app':escape(fullName(r.id))}">${label(r.id)}</span>`:''}${stale?`<span class="warning" title="${escape(age?`Last reading ${age} ago`:'No verified reading time')}">△</span>`:''}`}
+function card(r,i){const w=r.weekly,ok=validWindow(w)&&r.state!=='signIn',stale=isStale(r),age=stale&&Number.isFinite(ms(r.measuredAt))?shortAge((Date.now()-ms(r.measuredAt))/1000):null,pace=ok?paceFraction(w):null;
+ const label=ok?`${pct(w.remaining)}% of weekly allowance left`:emptyLabel(r);
+ const tip=ok?`Weekly ${pct(w.remaining)}% left · ${hasReset(w)?'resets '+clock(w.resetsAt):'window not started'}${pace!==null?` · ${Math.round(pace*100)}% of the week left (darker track)`:''}`:label;
+ return `<div class="account ${stale?'stale':''} ${ok&&w.remaining<15?'low':''}" role="button" tabindex="0" aria-label="${escape(fullName(r.id)+': '+label)}" onclick="details(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();details(${i})}">`+
+ `<div class="identity">${ident(r,stale,age)}</div>`+
+ `<div class="gauge" title="${escape(tip)}"><svg class="rings" viewBox="0 0 160 160" aria-hidden="true">${hasFive(r)?ring(r.state==='signIn'?null:r.fiveHour,76,7,'five-hour'):''}${ring(ok?w:null,IR,8,'weekly')}</svg><div class="reading"><div class="number ${ok?'':'empty'}">${ok?Math.round(pct(w.remaining)):escape(label)}</div>${ok?'<div class="unit">wk</div>':''}</div>${fiveBadge(r)}</div>`+
+ `<div class="reset" title="${ok&&hasReset(w)?escape('Weekly reset '+clock(w.resetsAt)):''}">${ok?`↻ ${resetIn(w)}`:''}${age?` <span class="age">· ${age} old</span>`:ok?tokenLine(r):''}</div></div>`}
+function fresh(r){return r.state==='ok'&&!isStale(r)}
+function statusText(){if(switching)return [`Switching to ${fullName(switching)}…`,false];if(switchError)return [switchError,true];if(refreshing)return ['Refreshing…',false];
+ if(source.unconfigured)return ['Set snapshotURL — see README',true];
+ const at=ms(snapshot.collectedAt);if(!source.ok&&(!Number.isFinite(at)||Date.now()-at>STALE_MS))return [Number.isFinite(at)?`Offline · data ${shortAge((Date.now()-at)/1000)} old`:'Data source unreachable',true];
+ const rows=rowsShown(),n=rows.filter(fresh).length;return [`${n===rows.length?'●':'◌'} ${n}/${rows.length} connected`,false]}
+function render(){const rows=rowsShown();document.getElementById('accounts').innerHTML=rows.map(card).join('');const [text,error]=statusText(),status=document.getElementById('status');status.textContent=text;status.classList.toggle('error',error);
+ document.getElementById('last-update').textContent=snapshot.collectedAt?`Updated ${clock(snapshot.collectedAt)}`:'Awaiting update';document.getElementById('refresh').classList.toggle('spinning',refreshing);
+ if(detailId!==null){const i=rows.findIndex(r=>r.id===detailId);i<0?closeDetails():details(i)}}
+function updateSnapshot(data){snapshot=data;render()}
+function setSource(state){source=state||{ok:true};render()}
+function appControl(id){if(!canSwitch(id))return '';if(switching===id)return '<button class="pill" disabled>Switching…</button>';if(app?.running&&app.id===id)return '<span class="pill on" title="The ChatGPT app is using this account">In app</span>';return `<button class="pill" ${switching?'disabled':''} title="Relaunch the ChatGPT app on this account" onclick="event.stopPropagation();switchTo('${id}')">Use in app</button>`}
+function updateAppProfile(state){app=state;render()}
+function switchTo(id){if(switching)return;switching=id;switchError=null;render();post('switch:'+id)}
+function switchStarted(id){switching=id;render()}
+function switchFinished(id,ok,detail){switching=null;switchError=ok?null:`Switch failed${detail?': '+detail:''}`;if(!ok)setTimeout(()=>{switchError=null;render()},12000);render()}
+// Tint opacity rises geometrically from 3% at 15 to fully opaque at 100 (the original off-white #fbfcf5 / dark #202a24);
+// the default 50 stays close to the earlier glass (~13%).
+function setGlassIntensity(value){const intensity=Math.max(15,Math.min(100,Number(value)||50)),alpha=0.03*Math.pow(1/0.03,(intensity-15)/85);document.documentElement.style.setProperty('--glass-tint',String(Number(alpha.toFixed(3))))}
+function setTheme(dark){document.body.classList.toggle('light',!dark)}
+function setLayout(rows){document.documentElement.style.setProperty('--columns',rows===1?'4':'2')}
+function setStatus(text){const s=document.getElementById('status');s.textContent=text;s.classList.add('error')}
+function refresh(){if(refreshing)return;refreshing=true;render();post('refresh')}
+function refreshStarted(){refreshing=true;render()}
+function refreshFinished(){refreshing=false;render()}
+function windowRow(label,r,key){const w=r[key];if(key==='fiveHour'&&r.fiveHourAbsent&&!w)return '';if(validWindow(w)&&r.state!=='signIn')return `<dt>${label}</dt><dd>${pct(w.remaining)}% left · ${hasReset(w)?'resets '+escape(clock(w.resetsAt)):'not started'}</dd>`;return `<dt>${label}</dt><dd>${escape(key==='weekly'?emptyLabel(r):'—')}</dd>`}
+function sourceList(t){return (Array.isArray(t.sources)?t.sources:[]).map(s=>escape(s.name)+(s.state==='ok'?'':s.state==='stale'?' (cached)':' (missing)')).join(' · ')}
+function tokenRows(r){const wk=currentTokens(r,'weekly'),fh=currentTokens(r,'fiveHour');if(!wk&&!fh)return '';const t=wk||fh,u=t.usage;
+ const head=[wk&&`${wk.complete?'':'≥'}${tokenCount(wk.usage.total_tokens)} this week`,fh&&`${tokenCount(fh.usage.total_tokens)} in 5h`].filter(Boolean).join(' · ');
+ const flags=[num(t.incompleteCalls)&&`${num(t.incompleteCalls)} calls lack counts`,num(t.boundaryCalls)&&`${tokenCount(num(t.unallocatedTokens))} span the reset`].filter(Boolean).join(' · ');
+ return `<dt>Tokens</dt><dd>${head}<span class="sub">in ${tokenCount(num(u.input_tokens))} (${tokenCount(num(u.cached_input_tokens))} cached) · out ${tokenCount(num(u.output_tokens))}${flags?' · '+flags:''}</span></dd><dt>Devices</dt><dd>${sourceList(t)}</dd>`}
+function closeDetails(){detailId=null;document.getElementById('detail').classList.remove('open')}
+function details(index){const r=rowsShown()[index];if(!r)return closeDetails();detailId=r.id;const d=document.getElementById('detail'),wk=currentTokens(r,'weekly');d.classList.add('open');
+ d.innerHTML=`<div class="d-head">${mark(r.id)}<span>${escape(fullName(r.id))}</span>${appControl(r.id)}<button class="close" aria-label="Close details" onclick="closeDetails()">×</button></div>`+
+ `<dl>${windowRow('Weekly',r,'weekly')}${windowRow('5-hour',r,'fiveHour')}${(Array.isArray(r.extras)?r.extras:[]).map(e=>`<dt>${escape(e.label||'Other')}</dt><dd>${validWindow(e)?`${pct(e.remaining)}% left${hasReset(e)?' · resets '+escape(clock(e.resetsAt)):''}`:'—'}</dd>`).join('')}${tokenRows(r)}<dt>Updated</dt><dd>${r.measuredAt?escape(clock(r.measuredAt))+(isStale(r)?' (stale)':''):'—'}</dd></dl>`+
+ (wk?`<p class="note">Tokens recorded on your devices only${num(wk.automationCalls)?` (incl. ${num(wk.automationCalls)} automated)`:''}.</p>`:'')}
+document.addEventListener('keydown',e=>{if(e.key==='Tab')document.body.classList.add('keyboard');if(e.key==='Escape'&&detailId!==null){e.preventDefault();closeDetails()}});
+document.addEventListener('mousedown',()=>document.body.classList.remove('keyboard'));
+// Preview check: every center label and the worst-case token text must sit inside the ring's inner edge.
+function inspectGeometry(){const source=document.querySelector('.account .gauge');if(!source)return null;const probe=source.cloneNode(true),g=source.getBoundingClientRect();
+ probe.style.cssText=`position:fixed;left:-2000px;top:0;width:${g.width}px;height:${g.height}px;margin:0`;document.querySelector('.account').appendChild(probe);
+ const p=probe.getBoundingClientRect(),cx=p.x+p.width/2,cy=p.y+p.height/2,inner=(IR-8/2)*p.width/160,reading=probe.querySelector('.reading');
+ // Centre numbers are whole percentages; the exact value is in the tooltip and details.
+ const cases=[['100','wk'],['88','wk'],['Updating',''],['No data',''],['Sign in','']];let clearance=Infinity,worst=null;
+ for(const [number,tokens] of cases){reading.innerHTML=`<div class="number ${/^\d+$/.test(number)?'':'empty'}">${number}</div>${tokens?`<div class="unit">${tokens}</div>`:''}`;
+  for(const el of [...reading.children].filter(e=>getComputedStyle(e).display!=='none')){const b=el.getBoundingClientRect(),corner=Math.max(...[[b.left,b.top],[b.right,b.top],[b.left,b.bottom],[b.right,b.bottom]].map(([x,y])=>Math.hypot(x-cx,y-cy)));if(inner-corner<clearance){clearance=inner-corner;worst=number.replace(/<[^>]+>/g,'')+' / '+tokens}}}
+ probe.remove();return {clearance,worst,innerRadius:inner}}
+// Preview check: the 5-hour badge must clear the weekly ring at every displayed tenth-percent.
+function inspectRingGeometry(){const source=document.querySelector('.account'),probe=source.cloneNode(true);
+ probe.style.cssText=`position:fixed;left:-2000px;top:0;width:${source.getBoundingClientRect().width}px;visibility:hidden`;
+ probe.querySelector('.rings').innerHTML=ring({remaining:100,resetsAt:new Date(Date.now()+3600000).toISOString()},76,7,'five-hour')+ring({remaining:100,resetsAt:new Date(Date.now()+3600000).toISOString()},IR,8,'weekly');
+ document.body.appendChild(probe);
+ const gauge=probe.querySelector('.gauge'),g=gauge.getBoundingClientRect(),cx=g.x+g.width/2,cy=g.y+g.height/2;
+ let badge=probe.querySelector('.five-badge');if(!badge){badge=document.createElement('span');badge.className='five-badge';gauge.appendChild(badge)}
+ const radius=(IR+8/2)*g.width/160,halo=document.body.classList.contains('compact')?.5:1;let clearance=Infinity,worst=null;
+ for(let n=0;n<=1000;n++){const value=n/10,p=badgeAt(value);badge.textContent=String(Math.round(value));badge.style.left=p.left+'%';badge.style.top=p.top+'%';
+  const b=badge.getBoundingClientRect(),dx=Math.max(b.left-cx,0,cx-b.right),dy=Math.max(b.top-cy,0,cy-b.bottom),gap=Math.hypot(dx,dy)-radius-halo;if(gap<clearance){clearance=gap;worst=value}}
+ probe.remove();return {clearance,worst,samples:1001}}
+updateSnapshot({rows:[],collectedAt:null});
+setInterval(render,30000);
+</script></html>

@@ -1,0 +1,5 @@
+[
+  {"id": "codex",   "name": "Codex",  "label": "A", "icon": "codex"},
+  {"id": "codex_b", "name": "Codex",  "label": "B", "icon": "codex"},
+  {"id": "claude",  "name": "Claude", "menuLabel": "C", "icon": "claude"}
+]

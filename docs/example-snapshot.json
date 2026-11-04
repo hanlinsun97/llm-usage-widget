@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "collectedAt": "2026-11-04T16:00:00+00:00",
+  "rows": [
+    {
+      "id": "codex",
+      "state": "ok",
+      "measuredAt": "2026-11-04T16:00:00+00:00",
+      "weekly":   {"remaining": 44, "minutes": 10080, "resetsAt": "2026-11-04T18:52:13+00:00"},
+      "fiveHour": {"remaining": 94, "minutes": 300,   "resetsAt": "2026-11-04T19:30:05+00:00"},
+      "fiveHourAbsent": false,
+      "tokenUsage": {
+        "weekly": {
+          "since": "2026-10-28T18:52:13+00:00",
+          "until": "2026-11-04T18:52:13+00:00",
+          "complete": true,
+          "usage": {"total_tokens": 123835025, "input_tokens": 123522741, "cached_input_tokens": 120099072,
+                    "output_tokens": 312284, "reasoning_output_tokens": 159112},
+          "sources": [{"name": "Laptop", "state": "ok"}]
+        }
+      }
+    },
+    {
+      "id": "claude",
+      "state": "ok",
+      "measuredAt": "2026-11-04T16:00:00+00:00",
+      "weekly":   {"remaining": 73, "minutes": 10080, "resetsAt": "2026-11-09T00:00:00+00:00"},
+      "fiveHour": {"remaining": 100, "minutes": 300, "resetsAt": null},
+      "fiveHourAbsent": false
+    },
+    {
+      "id": "codex_b",
+      "state": "signIn",
+      "measuredAt": null,
+      "weekly": null,
+      "fiveHour": null,
+      "fiveHourAbsent": false
+    }
+  ]
+}

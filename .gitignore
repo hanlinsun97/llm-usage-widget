@@ -1,0 +1,16 @@
+.DS_Store
+# Local history and design renders
+baseline/
+previews/
+codex-icon.png
+# Generated evidence and receipts (rewritten by tests and installs)
+*-check.json
+data-route-check.json
+installation.json
+/preview.pdf
+/menu-preview.pdf
+/menu-bar-preview.pdf
+# Agent notes and the author's own setup (kept locally, not published)
+HANDOFF.md
+LESSONS.md
+DATA_SOURCES.md
