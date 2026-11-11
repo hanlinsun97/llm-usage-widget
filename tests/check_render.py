@@ -38,7 +38,10 @@ for result in (desktop, menu):
     assert geometry['clearance'] >= 1.5, geometry
     print('Centre text clearance:', round(geometry['clearance'], 2), 'px; worst case:', geometry['worst'])
 assert menu['compact'] and not desktop['compact']
-assert 'tok' in desktop['text']  # tokens are hidden in the popover, shown on the desktop
+for result in (desktop, menu):
+    assert 'tok' not in result['text'].lower()
+    assert result['text'].count('week') == 4 and result['text'].count('hour') == 4
+    assert result['text'].count('↻') == 1  # global refresh only
 assert menu['menuImageWidth'] == 96
 for key in ('openedByButton', 'closedByButton', 'reopenedByButton', 'settings', 'transient'):
     assert menu[key], key

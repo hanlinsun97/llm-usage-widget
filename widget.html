@@ -48,12 +48,11 @@ body.keyboard button:focus-visible,body.keyboard .account:focus-visible{outline:
 .number{font-size:30px;font-weight:600;letter-spacing:-.8px;line-height:1;font-variant-numeric:tabular-nums}
 .unit{font-size:10px;font-weight:500;color:var(--sub);margin-top:2px;letter-spacing:.4px}
 .number.empty{font-size:13px;font-weight:500;letter-spacing:0;color:var(--muted)}
-.tok{color:var(--sub);font-variant-numeric:tabular-nums}
 .stale .reading{opacity:.55}
 .five-badge{position:absolute;transform:translate(-50%,-50%);border-radius:10px;padding:1px 5px;background:var(--badge);color:var(--badge-ink);font-size:11px;font-weight:650;line-height:14px;box-shadow:0 0 0 2px rgba(var(--glass-rgb),.6);font-variant-numeric:tabular-nums;white-space:nowrap}
 .five-badge.low{background:var(--low);color:#fff}
-.reset{font-size:12px;color:var(--ink);line-height:18px;height:18px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.reset .age{color:var(--warn)}
+.reset{font-size:12px;color:var(--ink);line-height:15px;height:30px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.reset-label{color:var(--muted);margin-right:5px}
 .foot{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:9px;color:var(--muted);gap:12px}
 #status{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 #status.error{color:var(--warn)}
@@ -85,10 +84,8 @@ dd .sub{display:block;color:var(--muted);font-size:11px;margin-top:1px}
 .compact .number{font-size:18px;letter-spacing:-.5px}
 .compact .unit{font-size:8px;margin-top:1px}
 .compact .number.empty{font-size:9px}
-.compact .reset .tok{display:block;font-size:9px;line-height:11px}
-.compact .reset .tok .dot{display:none}
 .compact .five-badge{font-size:9px;padding:0 3px;line-height:12px;box-shadow:0 0 0 1px rgba(var(--glass-rgb),.6)}
-.compact .reset{font-size:10px;line-height:14px;height:25px}
+.compact .reset{font-size:10px;line-height:13px;height:26px}
 .compact .detail{inset:36px 10px 8px;padding:10px 16px;font-size:11px;line-height:1.35}
 .compact .d-head{font-size:12px;margin-bottom:6px}
 .compact .d-head svg{width:15px;height:15px}
@@ -135,7 +132,10 @@ function isStale(r){const t=ms(r.measuredAt);return r.state==='stale'||!Number.i
 function emptyLabel(r){if(r.state==='signIn')return 'Sign in';if(expired(r.weekly))return Date.now()-ms(r.weekly.resetsAt)<UPDATE_GRACE_MS&&!isStale(r)?'Updating':'No data';return 'No data'}
 // Token totals must belong to the current server reset window; zero is a valid count.
 function currentTokens(r,key){const t=r.tokenUsage?.[key],w=r[key];if(!validWindow(w)||!t||!Number.isFinite(t.usage?.total_tokens)||t.usage.total_tokens<0||ms(t.until)!==ms(w.resetsAt)||!t.sources?.some(s=>s.state==='ok'||s.state==='stale'))return null;return t}
-function tokenLine(r){const t=currentTokens(r,'weekly');if(!t)return '';return `<span class="tok" title="Recorded tokens since the weekly reset${t.complete?'':' (some devices offline: lower bound)'}"><span class="dot"> · </span>${t.complete?'':'≥'}${tokenCount(t.usage.total_tokens)} tok</span>`}
+function resetLine(r,key,label){const w=r[key],ok=validWindow(w)&&r.state!=='signIn';
+ const value=key==='fiveHour'&&!hasFive(r)?'no limit':ok?resetIn(w):'—';
+ const title=ok&&hasReset(w)?`${label} reset ${clock(w.resetsAt)}`:`${label}: ${value}`;
+ return `<div title="${escape(title)}"><span class="reset-label">${label}</span>${escape(value)}</div>`}
 // Pace track: on the weekly ring the track is darker from the top over the share of the week
 // still left. The weekly arc covers it when usage is on or under pace; an uncovered remainder means over pace.
 function paceFraction(w){if(!validWindow(w)||!hasReset(w)||!Number.isFinite(w.minutes)||w.minutes<=0)return null;return Math.max(0,Math.min(1,(ms(w.resetsAt)-Date.now())/(w.minutes*60000)))}
@@ -144,8 +144,8 @@ function ring(w,r,width,kind){const c=2*Math.PI*r,track=`<circle class="track" c
 const hasFive=r=>!(r.fiveHourAbsent&&!r.fiveHour);
 // 5-hour remaining sits in a badge at the end of the outer arc.
 function badgeAt(value){const a=(-90+3.6*value)*Math.PI/180;return {left:50+47.5*Math.cos(a),top:50+47.5*Math.sin(a)}}
-function fiveBadge(r){if(!hasFive(r))return '';const w=r.fiveHour,valid=validWindow(w)&&r.state!=='signIn',value=valid?Math.max(0,Math.min(100,w.remaining)):0,p=badgeAt(value),t=currentTokens(r,'fiveHour');
- const title=`5-hour: ${valid?pct(value)+'% left · resets in '+resetIn(w):'no current reading'}${t?' · '+tokenCount(t.usage.total_tokens)+' tokens':''}`;
+function fiveBadge(r){if(!hasFive(r))return '';const w=r.fiveHour,valid=validWindow(w)&&r.state!=='signIn',value=valid?Math.max(0,Math.min(100,w.remaining)):0,p=badgeAt(value);
+ const title=`5-hour: ${valid?pct(value)+'% left · resets in '+resetIn(w):'no current reading'}`;
  return `<span class="five-badge ${valid&&value<20?'low':''}" style="left:${p.left}%;top:${p.top}%" title="${escape(title)}">${valid?Math.round(value):'—'}</span>`}
 function ident(r,stale,age){const active=app?.running&&app.id===r.id,a=acct(r.id);
  return `<span class="mark" aria-hidden="true">${mark(r.id,'codex-icon')}</span><b>${escape(a.name)}</b>${a.label?`<span class="account-tag ${active?'active':''}" title="${active?'Active in the ChatGPT app':escape(fullName(r.id))}">${label(r.id)}</span>`:''}${stale?`<span class="warning" title="${escape(age?`Last reading ${age} ago`:'No verified reading time')}">△</span>`:''}`}
@@ -155,7 +155,7 @@ function card(r,i){const w=r.weekly,ok=validWindow(w)&&r.state!=='signIn',stale=
  return `<div class="account ${stale?'stale':''} ${ok&&w.remaining<15?'low':''}" role="button" tabindex="0" aria-label="${escape(fullName(r.id)+': '+label)}" onclick="details(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();details(${i})}">`+
  `<div class="identity">${ident(r,stale,age)}</div>`+
  `<div class="gauge" title="${escape(tip)}"><svg class="rings" viewBox="0 0 160 160" aria-hidden="true">${hasFive(r)?ring(r.state==='signIn'?null:r.fiveHour,76,7,'five-hour'):''}${ring(ok?w:null,IR,8,'weekly')}</svg><div class="reading"><div class="number ${ok?'':'empty'}">${ok?Math.round(pct(w.remaining)):escape(label)}</div>${ok?'<div class="unit">wk</div>':''}</div>${fiveBadge(r)}</div>`+
- `<div class="reset" title="${ok&&hasReset(w)?escape('Weekly reset '+clock(w.resetsAt)):''}">${ok?`↻ ${resetIn(w)}`:''}${age?` <span class="age">· ${age} old</span>`:ok?tokenLine(r):''}</div></div>`}
+ `<div class="reset">${resetLine(r,'weekly','week')}${resetLine(r,'fiveHour','hour')}</div></div>`}
 function fresh(r){return r.state==='ok'&&!isStale(r)}
 function statusText(){if(switching)return [`Switching to ${fullName(switching)}…`,false];if(switchError)return [switchError,true];if(refreshing)return ['Refreshing…',false];
  if(source.unconfigured)return ['Set snapshotURL — see README',true];

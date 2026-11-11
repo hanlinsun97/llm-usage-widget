@@ -8,8 +8,11 @@ Each account is a card with two rings:
   that value.
 - **Outer ring:** 5-hour allowance left. Its number sits in a badge at the end of
   the arc and turns orange below 20%.
-- **Below the rings:** the time until the weekly reset, then the tokens recorded
-  this week.
+- **Below the rings:** two labelled countdowns: `week` for the weekly reset and
+  `hour` for the 5-hour reset. For example, `hour 33m` means the 5-hour allowance
+  resets in 33 minutes.
+  Hover over a countdown for its reset time. Token counts appear only in account
+  details. The top-right refresh button refreshes all accounts.
 - **Inner track:** slightly darker over the share of the week still left. If
   usage runs ahead of time, that darker part shows beyond the arc.
 

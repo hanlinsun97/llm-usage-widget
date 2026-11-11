@@ -512,7 +512,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
     func applyLayout() {
         let desktopRows = rowCount("desktopRows"), compactRows = rowCount("popoverRows")
-        let size = desktopRows == 1 ? NSSize(width: 660, height: 282) : NSSize(width: 360, height: 484)
+        let size = desktopRows == 1 ? NSSize(width: 660, height: 294) : NSSize(width: 360, height: 508)
         let old = panel.frame
         panel.setContentSize(size)
         var origin = NSPoint(x: old.maxX - size.width, y: old.maxY - size.height)

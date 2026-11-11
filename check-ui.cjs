@@ -66,11 +66,11 @@ assert(/--glass-rgb:251,252,245/.test(lightBlock)&&/--glass:rgba\(var\(--glass-r
 
 // Stale: dimmed with its age; fresh rows have no age.
 ctx.updateSnapshot({rows:[{...row,weekly:week(70),state:'stale',measuredAt:at(-180)}],collectedAt:now});
-assert.match(accounts(),/class="account stale/);assert(accounts().includes('3h old'));
+assert.match(accounts(),/class="account stale/);assert(accounts().includes('Last reading 3h ago'));
 ctx.updateSnapshot({rows:[{...row,weekly:week(70),measuredAt:at(-14)}],collectedAt:now});
 assert(!accounts().includes('stale')&&!accounts().includes(' old<'));
 ctx.updateSnapshot({rows:[{...row,weekly:week(70),measuredAt:at(-16)}],collectedAt:now});
-assert(accounts().includes('16m old'));
+assert(accounts().includes('Last reading 16m ago'));
 ctx.updateSnapshot({rows:[{...row,weekly:week(70),measuredAt:undefined}],collectedAt:now});
 assert.match(accounts(),/class="account stale/,'unknown measurement time counts as stale');
 
@@ -82,21 +82,28 @@ assert.match(accounts(),/class="account  low"/);
 const total={usage:{total_tokens:0},until:row.weekly.resetsAt,complete:true,sources:[{state:'ok'}]};
 const r2={...row,weekly:{...row.weekly}};const withTokens={...r2,tokenUsage:{weekly:{...total,until:r2.weekly.resetsAt}}};
 const none='';
-assert.match(ctx.tokenLine(withTokens),/<\/span>0 tok<\/span>$/);
-assert.equal(ctx.tokenLine({...withTokens,tokenUsage:{weekly:{...total,until:at(-5)}}}),none);
-assert.equal(ctx.tokenLine({...withTokens,tokenUsage:{weekly:{...total,until:r2.weekly.resetsAt,sources:[{state:'unavailable'}]}}}),none);
-assert.match(ctx.tokenLine({...withTokens,tokenUsage:{weekly:{...total,until:r2.weekly.resetsAt,complete:false}}}),/≥0 tok/);
-assert.equal(ctx.tokenLine({id:'claude'}),none);
+assert.match(ctx.tokenRows(withTokens),/0 this week/);
+assert.equal(ctx.tokenRows({...withTokens,tokenUsage:{weekly:{...total,until:at(-5)}}}),none);
+assert.equal(ctx.tokenRows({...withTokens,tokenUsage:{weekly:{...total,until:r2.weekly.resetsAt,sources:[{state:'unavailable'}]}}}),none);
+assert.match(ctx.tokenRows({...withTokens,tokenUsage:{weekly:{...total,until:r2.weekly.resetsAt,complete:false}}}),/≥0 this week/);
+assert.equal(ctx.tokenRows({id:'claude'}),none);
 assert.equal(ctx.tokenCount(123835025),'124M');assert.equal(ctx.tokenCount(9061234),'9.1M');
 assert.equal(ctx.tokenCount(1500),'1.5K');assert.equal(ctx.tokenCount(0),'0');assert.equal(ctx.tokenCount(2.4e9),'2.4B');
 
-// Reset line under the ring: weekly countdown.
+// Overview shows both reset countdowns; tokens are available only in details.
 ctx.updateSnapshot({rows:[{...row,weekly:week(50,600)}],collectedAt:now});
-assert(accounts().includes('↻ 10h 0m'));
-{const wk=week(50,600);ctx.updateSnapshot({rows:[{...row,weekly:wk,tokenUsage:{weekly:{usage:{total_tokens:123835025},until:wk.resetsAt,complete:true,sources:[{state:'ok'}]}}}],collectedAt:now});
- assert.match(accounts(),/↻ 10h 0m<span class="tok"[^>]*><span class="dot"> · <\/span>124M tok/,'tokens follow the reset time');}
+assert.match(accounts(), /week<\/span>10h 0m/);
+assert.match(accounts(), /hour<\/span>1h 0m/);
+assert(!accounts().includes('↻'));
+{const wk=week(50,600);ctx.updateSnapshot({rows:[{...row,weekly:wk,tokenUsage:{weekly:{usage:{total_tokens:123835025},until:wk.resetsAt,complete:true,sources:[{state:'ok'}]},fiveHour:{usage:{total_tokens:1500},until:row.fiveHour.resetsAt,complete:true,sources:[{state:'ok'}]}}}],collectedAt:now});
+ assert(!/tok|124M|1.5K/i.test(accounts()),'overview and tooltips omit tokens');
+ ctx.details(0);assert.match(nodes.get('detail').innerHTML,/124M this week/);assert.match(nodes.get('detail').innerHTML,/1.5K in 5h/);ctx.closeDetails();}
+assert.match(ctx.resetLine({...row,fiveHour:{remaining:100,resetsAt:null}},'fiveHour','hour'),/not started/);
+assert.match(ctx.resetLine({...row,fiveHour:null,fiveHourAbsent:true},'fiveHour','hour'),/no limit/);
+assert.match(ctx.resetLine({...row,fiveHour:{remaining:50,resetsAt:at(-1)}},'fiveHour','hour'),/hour<\/span>—/);
+assert.match(ctx.resetLine({...row,state:'signIn'},'fiveHour','hour'),/hour<\/span>—/);
 ctx.updateSnapshot({rows:[{...row,weekly:week(50,600),state:'stale',measuredAt:at(-180)}],collectedAt:now});
-assert(accounts().includes('3h old')&&!accounts().includes(' tok<'),'stale age replaces the token count');
+assert(accounts().includes('Last reading 3h ago')&&accounts().includes('class="warning"'),'stale indicator retains age tooltip');
 // Dark-mode readability: active chips use the badge colours, never white on the light ring colour.
 assert(/\.account-tag\.active\{[^}]*color:var\(--badge-ink\)/.test(css)&&/\.pill\.on\{[^}]*color:var\(--badge-ink\)/.test(css));
 
@@ -163,4 +170,4 @@ ctx.setLayout(1);assert.equal(styles.get('--columns'),'4');ctx.setLayout(2);asse
 // Live snapshot, if given.
 if(process.argv[2]){const snapshot=JSON.parse(fs.readFileSync(process.argv[2]));ctx.setAccounts(config);ctx.updateSnapshot(snapshot);for(let i=0;i<snapshot.rows.length;i++)ctx.details(i);
  assert.equal((accounts().match(/class="account /g)||[]).length,config.length);assert(!accounts().includes('NaN')&&!nodes.get('detail').innerHTML.includes('NaN'));}
-console.log('PASS: accounts.json (order, missing, unknown, custom, invalid, escaping), two rings (weekly inner, 5-hour outer) + badge + pace track, wk label, tokens on reset line, chip contrast, not-started windows, zero/full/NaN, sign-in/updating/no-data labels, empty-label size regression, stale age, low warning, tokens (zero/mismatch/partial/format/alignment), reset line, footer, details + Escape + reorder + extras, escaping, bridge'+(process.argv[2]?', live snapshot':''));
+console.log('PASS: accounts.json (order, missing, unknown, custom, invalid, escaping), two rings (weekly inner, 5-hour outer) + badge + pace track, wk label, both reset countdowns, tokens only in details, chip contrast, not-started windows, zero/full/NaN, sign-in/updating/no-data labels, empty-label size regression, stale age, low warning, tokens (zero/mismatch/partial/format/alignment), reset line, footer, details + Escape + reorder + extras, escaping, bridge'+(process.argv[2]?', live snapshot':''));
